@@ -2,8 +2,8 @@ use anyhow::Result;
 use clap::{Arg, ArgGroup, App, SubCommand};
 use reqwest::blocking as reqb;
 use serde_json::Value;
-use std::io::copy;
-use std::fs::File;
+use std::io;
+use std::fs;
 
 
 const GITHUB_LATEST_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/latest";
@@ -64,8 +64,8 @@ fn main() -> Result<()> {
         println!("download url: {}", asset.download_url);
 
         let mut response = reqb::get(&asset.download_url)?;
-        let mut dest = File::create(asset.name)?;
-        copy(&mut response, &mut dest)?;
+        let mut dest = fs::File::create(asset.name)?;
+        io::copy(&mut response, &mut dest)?;
     }
 
     Ok(())
