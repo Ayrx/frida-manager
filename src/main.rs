@@ -2,10 +2,14 @@ use anyhow::Result;
 use clap::{Arg, ArgGroup, App, SubCommand};
 use reqwest::blocking as reqb;
 use serde_json::Value;
+use std::io::copy;
+use std::fs::File;
+
 
 const GITHUB_LATEST_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/latest";
 const APP_USER_AGENT: &'static str = "frida-manager";
 
+#[derive(Clone)]
 struct Asset {
     name: String,
     content_type: String,
@@ -15,6 +19,20 @@ struct Asset {
 struct Release {
     version: String,
     assets: Vec<Asset>
+}
+
+impl Release {
+    fn get_frida_server_assets(&self) -> Vec<Asset> {
+        let mut assets: Vec<Asset> = Vec::new();
+
+        for asset in &self.assets {
+            if asset.name.starts_with("frida-server-") {
+                assets.push(asset.clone());
+            }
+        }
+
+        assets
+    }
 }
 
 fn main() -> Result<()> {
@@ -39,7 +57,16 @@ fn main() -> Result<()> {
     }
 
     println!("version: {}", release.version);
-    println!("assets: {}", release.assets.len());
+    let assets = release.get_frida_server_assets();
+
+    for asset in assets {
+        println!("name: {}", asset.name);
+        println!("download url: {}", asset.download_url);
+
+        let mut response = reqb::get(&asset.download_url)?;
+        let mut dest = File::create(asset.name)?;
+        copy(&mut response, &mut dest)?;
+    }
 
     Ok(())
 }
