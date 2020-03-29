@@ -142,6 +142,7 @@ dependencies = [
  "anyhow",
  "clap",
  "reqwest",
+ "serde_json",
 ]
 
 [[package]]

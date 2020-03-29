@@ -1,6 +1,23 @@
+use anyhow::Result;
 use clap::{Arg, ArgGroup, App, SubCommand};
+use reqwest::blocking as reqb;
+use serde_json::Value;
 
-fn main() {
+const GITHUB_LATEST_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/latest";
+const APP_USER_AGENT: &'static str = "frida-manager";
+
+struct Asset {
+    name: String,
+    content_type: String,
+    download_url: String
+}
+
+struct Release {
+    version: String,
+    assets: Vec<Asset>
+}
+
+fn main() -> Result<()> {
     let matches = App::new(clap::crate_name!())
         .author(clap::crate_authors!())
         .version(clap::crate_version!())
@@ -13,13 +30,54 @@ fn main() {
                  .takes_value(true)))
     .get_matches();
 
+    let release;
     if let Some(version) = matches.value_of("FRIDA-VERSION") {
         println!("--frida-version option not implemented yet.");
+        return Ok(());
     } else {
-        fetch_latest_release();
+        release = fetch_latest_release()?;
     }
+
+    println!("version: {}", release.version);
+    println!("assets: {}", release.assets.len());
+
+    Ok(())
 }
 
-fn fetch_latest_release() {
-    ()
+fn fetch_latest_release() -> Result<Release> {
+    let client = reqb::Client::new();
+    let response = client.get(GITHUB_LATEST_RELEASES_URL)
+        .header(reqwest::header::USER_AGENT, APP_USER_AGENT)
+        .send()?
+        .error_for_status()?;
+
+    let content: Value = response.json()?;
+
+    let assets = content["assets"].as_array()
+        .expect("error: assets is not an array.");
+
+    let mut assets_vec = Vec::new();
+
+    for asset in assets {
+        let a = Asset {
+            name: asset["name"].as_str()
+                .expect("error: name is not a string.")
+                .to_string(),
+            content_type: asset["content_type"].as_str()
+                .expect("error: content_type is not a string.")
+                .to_string(),
+            download_url: asset["browser_download_url"].as_str()
+                .expect("error: browser_download_url is not a string.")
+                .to_string()
+        };
+
+        assets_vec.push(a);
+    }
+
+    Ok(Release {
+        version: content["tag_name"].as_str()
+            .expect("error: tag_name is not a string.")
+            .to_string(),
+        assets: assets_vec
+    })
 }
