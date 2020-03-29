@@ -48,6 +48,10 @@ fn main() -> Result<()> {
                  .takes_value(true)))
     .get_matches();
 
+    let home_dir = dirs::home_dir().expect("error: unable to determine $HOME.");
+    let app_home_dir = home_dir.join(".fridamanager");
+    fs::create_dir_all(&app_home_dir);
+
     let release;
     if let Some(version) = matches.value_of("FRIDA-VERSION") {
         println!("--frida-version option not implemented yet.");
@@ -59,12 +63,15 @@ fn main() -> Result<()> {
     println!("version: {}", release.version);
     let assets = release.get_frida_server_assets();
 
+    let version_dir = app_home_dir.join(release.version);
+    fs::create_dir_all(&version_dir);
+
     for asset in assets {
         println!("name: {}", asset.name);
         println!("download url: {}", asset.download_url);
 
         let mut response = reqb::get(&asset.download_url)?;
-        let mut dest = fs::File::create(asset.name)?;
+        let mut dest = fs::File::create(version_dir.join(asset.name))?;
         io::copy(&mut response, &mut dest)?;
     }
 
