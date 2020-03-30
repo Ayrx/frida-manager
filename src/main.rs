@@ -21,12 +21,15 @@ impl Asset {
     fn download(&self,
                       client: &reqb::Client,
                       download_dir: &path::PathBuf) -> Result<()> {
-        println!("[+] Downloading {}", &self.name);
         let mut response = client.get(&self.download_url).send()?;
         let mut dest = fs::File::create(download_dir.join(&self.name))?;
         io::copy(&mut response, &mut dest)?;
 
         Ok(())
+    }
+
+    fn exists(&self, download_dir: &path::PathBuf) -> bool {
+        return download_dir.join(&self.name).exists();
     }
 }
 
@@ -91,7 +94,12 @@ fn main() -> Result<()> {
         .expect("error: unable to create $HOME/.fridamanager/$VERSION");
 
     for asset in assets {
-        asset.download(&client, &version_dir)?;
+        if !asset.exists(&version_dir) {
+            println!("[+] Downloading {}.", asset.name);
+            asset.download(&client, &version_dir)?;
+        } else {
+            println!("[+] {} is cached.", asset.name);
+        }
     }
 
     Ok(())
