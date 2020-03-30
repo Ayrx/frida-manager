@@ -53,12 +53,19 @@ fn main() -> Result<()> {
     let app_home_dir = home_dir.join(".fridamanager");
     fs::create_dir_all(&app_home_dir);
 
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(reqwest::header::USER_AGENT, APP_USER_AGENT.parse().unwrap());
+
+    let client = reqb::Client::builder()
+        .default_headers(headers)
+        .build()?;
+
     let release;
     if let Some(version) = matches.value_of("FRIDA-VERSION") {
         println!("--frida-version option not implemented yet.");
         return Ok(());
     } else {
-        release = fetch_latest_release()?;
+        release = fetch_latest_release(&client)?;
     }
 
     println!("version: {}", release.version);
@@ -68,16 +75,14 @@ fn main() -> Result<()> {
     fs::create_dir_all(&version_dir);
 
     for asset in assets {
-        download_asset(&asset, &version_dir);
+        download_asset(&client, &asset, &version_dir);
     }
 
     Ok(())
 }
 
-fn fetch_latest_release() -> Result<Release> {
-    let client = reqb::Client::new();
+fn fetch_latest_release(client: &reqb::Client) -> Result<Release> {
     let response = client.get(GITHUB_LATEST_RELEASES_URL)
-        .header(reqwest::header::USER_AGENT, APP_USER_AGENT)
         .send()?
         .error_for_status()?;
 
@@ -112,9 +117,11 @@ fn fetch_latest_release() -> Result<Release> {
     })
 }
 
-fn download_asset(asset: &Asset, download_dir: &path::PathBuf) -> Result<()> {
+fn download_asset(client: &reqb::Client,
+                  asset: &Asset,
+                  download_dir: &path::PathBuf) -> Result<()> {
     println!("[+] Downloading {}", &asset.name);
-    let mut response = reqb::get(&asset.download_url)?;
+    let mut response = client.get(&asset.download_url).send()?;
     let mut dest = fs::File::create(download_dir.join(&asset.name))?;
     io::copy(&mut response, &mut dest)?;
 
