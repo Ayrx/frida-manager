@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, App, AppSettings, SubCommand};
 use reqwest::blocking as reqb;
 use serde_json::Value;
 use std::io;
@@ -58,6 +58,7 @@ fn main() -> Result<()> {
         .author(clap::crate_authors!())
         .version(clap::crate_version!())
         .about(clap::crate_description!())
+        .setting(AppSettings::ArgRequiredElseHelp)
         .subcommand(SubCommand::with_name("fetch")
             .about("Download Frida artifacts.")
             .arg(Arg::with_name("FRIDA-VERSION")
