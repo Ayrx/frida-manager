@@ -4,6 +4,7 @@ use reqwest::blocking as reqb;
 use serde_json::Value;
 use std::io;
 use std::fs;
+use std::path;
 
 
 const GITHUB_LATEST_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/latest";
@@ -67,12 +68,7 @@ fn main() -> Result<()> {
     fs::create_dir_all(&version_dir);
 
     for asset in assets {
-        println!("name: {}", asset.name);
-        println!("download url: {}", asset.download_url);
-
-        let mut response = reqb::get(&asset.download_url)?;
-        let mut dest = fs::File::create(version_dir.join(asset.name))?;
-        io::copy(&mut response, &mut dest)?;
+        download_asset(&asset, &version_dir);
     }
 
     Ok(())
@@ -114,4 +110,13 @@ fn fetch_latest_release() -> Result<Release> {
             .to_string(),
         assets: assets_vec
     })
+}
+
+fn download_asset(asset: &Asset, download_dir: &path::PathBuf) -> Result<()> {
+    println!("[+] Downloading {}", &asset.name);
+    let mut response = reqb::get(&asset.download_url)?;
+    let mut dest = fs::File::create(download_dir.join(&asset.name))?;
+    io::copy(&mut response, &mut dest)?;
+
+    Ok(())
 }
