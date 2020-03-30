@@ -17,6 +17,19 @@ struct Asset {
     download_url: String
 }
 
+impl Asset {
+    fn download(&self,
+                      client: &reqb::Client,
+                      download_dir: &path::PathBuf) -> Result<()> {
+        println!("[+] Downloading {}", &self.name);
+        let mut response = client.get(&self.download_url).send()?;
+        let mut dest = fs::File::create(download_dir.join(&self.name))?;
+        io::copy(&mut response, &mut dest)?;
+
+        Ok(())
+    }
+}
+
 struct Release {
     version: String,
     assets: Vec<Asset>
@@ -78,7 +91,7 @@ fn main() -> Result<()> {
         .expect("error: unable to create $HOME/.fridamanager/$VERSION");
 
     for asset in assets {
-        download_asset(&client, &asset, &version_dir)?;
+        asset.download(&client, &version_dir)?;
     }
 
     Ok(())
@@ -118,15 +131,4 @@ fn fetch_latest_release(client: &reqb::Client) -> Result<Release> {
             .to_string(),
         assets: assets_vec
     })
-}
-
-fn download_asset(client: &reqb::Client,
-                  asset: &Asset,
-                  download_dir: &path::PathBuf) -> Result<()> {
-    println!("[+] Downloading {}", &asset.name);
-    let mut response = client.get(&asset.download_url).send()?;
-    let mut dest = fs::File::create(download_dir.join(&asset.name))?;
-    io::copy(&mut response, &mut dest)?;
-
-    Ok(())
 }
