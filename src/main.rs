@@ -7,9 +7,9 @@ use std::fs;
 use std::path;
 
 
-const GITHUB_LATEST_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/latest";
-const GITHUB_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/tags";
-const APP_USER_AGENT: &'static str = "frida-manager";
+const GITHUB_LATEST_RELEASES_URL: &str = "https://api.github.com/repos/frida/frida/releases/latest";
+const GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/frida/frida/releases/tags";
+const APP_USER_AGENT: &str = "frida-manager";
 
 #[derive(Clone)]
 struct Asset {
@@ -30,7 +30,7 @@ impl Asset {
     }
 
     fn exists(&self, download_dir: &path::PathBuf) -> bool {
-        return download_dir.join(&self.name).exists();
+        download_dir.join(&self.name).exists()
     }
 }
 
@@ -78,7 +78,7 @@ fn main() -> Result<()> {
         fetch(matches, &app_home_dir)?;
     }
 
-    if let Some(matches) = matches.subcommand_matches("clean") {
+    if let Some(_matches) = matches.subcommand_matches("clean") {
         fs::remove_dir_all(&app_home_dir)?;
         fs::create_dir_all(&app_home_dir)?;
     }
