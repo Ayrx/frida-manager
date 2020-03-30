@@ -8,6 +8,7 @@ use std::path;
 
 
 const GITHUB_LATEST_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/latest";
+const GITHUB_RELEASES_URL: &'static str = "https://api.github.com/repos/frida/frida/releases/tags";
 const APP_USER_AGENT: &'static str = "frida-manager";
 
 #[derive(Clone)]
@@ -96,10 +97,10 @@ fn fetch(matches: &clap::ArgMatches,
 
     let release;
     if let Some(version) = matches.value_of("FRIDA-VERSION") {
-        println!("--frida-version option not implemented yet.");
-        return Ok(());
+        release = fetch_release(&client, format!(
+                "{}/{}", GITHUB_RELEASES_URL, version).as_str())?;
     } else {
-        release = fetch_latest_release(&client)?;
+        release = fetch_release(&client, GITHUB_LATEST_RELEASES_URL)?;
     }
 
     println!("[+] Frida Version: {}", release.version);
@@ -122,8 +123,8 @@ fn fetch(matches: &clap::ArgMatches,
     Ok(())
 }
 
-fn fetch_latest_release(client: &reqb::Client) -> Result<Release> {
-    let response = client.get(GITHUB_LATEST_RELEASES_URL)
+fn fetch_release(client: &reqb::Client, url: &str) -> Result<Release> {
+    let response = client.get(url)
         .send()?
         .error_for_status()?;
 
