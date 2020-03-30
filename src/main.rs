@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgGroup, App, SubCommand};
+use clap::{Arg, App, SubCommand};
 use reqwest::blocking as reqb;
 use serde_json::Value;
 use std::io;
@@ -49,9 +49,11 @@ fn main() -> Result<()> {
                  .takes_value(true)))
     .get_matches();
 
-    let home_dir = dirs::home_dir().expect("error: unable to determine $HOME.");
+    let home_dir = dirs::home_dir()
+        .expect("error: unable to determine $HOME.");
     let app_home_dir = home_dir.join(".fridamanager");
-    fs::create_dir_all(&app_home_dir);
+    fs::create_dir_all(&app_home_dir)
+        .expect("error: unable to create $HOME/.fridamanager");
 
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, APP_USER_AGENT.parse().unwrap());
@@ -72,10 +74,11 @@ fn main() -> Result<()> {
     let assets = release.get_frida_server_assets();
 
     let version_dir = app_home_dir.join(release.version);
-    fs::create_dir_all(&version_dir);
+    fs::create_dir_all(&version_dir)
+        .expect("error: unable to create $HOME/.fridamanager/$VERSION");
 
     for asset in assets {
-        download_asset(&client, &asset, &version_dir);
+        download_asset(&client, &asset, &version_dir)?;
     }
 
     Ok(())
