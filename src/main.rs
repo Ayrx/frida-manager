@@ -63,6 +63,8 @@ fn main() -> Result<()> {
                  .help("Download the specified Frida version.")
                  .long("frida-version")
                  .takes_value(true)))
+        .subcommand(SubCommand::with_name("clean")
+            .about("Clean cached artifacts."))
     .get_matches();
 
     let home_dir = dirs::home_dir()
@@ -71,36 +73,44 @@ fn main() -> Result<()> {
     fs::create_dir_all(&app_home_dir)
         .expect("error: unable to create $HOME/.fridamanager");
 
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, APP_USER_AGENT.parse().unwrap());
 
-    let client = reqb::Client::builder()
-        .default_headers(headers)
-        .build()?;
+    if let Some(matches) = matches.subcommand_matches("fetch") {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(reqwest::header::USER_AGENT, APP_USER_AGENT.parse().unwrap());
 
-    let release;
-    if let Some(version) = matches.value_of("FRIDA-VERSION") {
-        println!("--frida-version option not implemented yet.");
-        return Ok(());
-    } else {
-        release = fetch_latest_release(&client)?;
+        let client = reqb::Client::builder()
+            .default_headers(headers)
+            .build()?;
+
+        let release;
+        if let Some(version) = matches.value_of("FRIDA-VERSION") {
+            println!("--frida-version option not implemented yet.");
+            return Ok(());
+        } else {
+            release = fetch_latest_release(&client)?;
+        }
+
+        println!("[+] Frida Version: {}", release.version);
+        let assets = release.get_frida_server_assets();
+
+        let version_dir = app_home_dir.join(release.version);
+        fs::create_dir_all(&version_dir)
+            .expect("error: unable to create $HOME/.fridamanager/$VERSION");
+
+        println!("[+] {} frida-server binaries found.", assets.len());
+        for asset in assets {
+            if !asset.exists(&version_dir) {
+                println!("[+] Downloading {}.", asset.name);
+                asset.download(&client, &version_dir)?;
+            } else {
+                println!("[+] {} is cached.", asset.name);
+            }
+        }
     }
 
-    println!("[+] Frida Version: {}", release.version);
-    let assets = release.get_frida_server_assets();
-
-    let version_dir = app_home_dir.join(release.version);
-    fs::create_dir_all(&version_dir)
-        .expect("error: unable to create $HOME/.fridamanager/$VERSION");
-
-    println!("[+] {} frida-server binaries found.", assets.len());
-    for asset in assets {
-        if !asset.exists(&version_dir) {
-            println!("[+] Downloading {}.", asset.name);
-            asset.download(&client, &version_dir)?;
-        } else {
-            println!("[+] {} is cached.", asset.name);
-        }
+    if let Some(matches) = matches.subcommand_matches("clean") {
+        fs::remove_dir_all(&app_home_dir)?;
+        fs::create_dir_all(&app_home_dir)?;
     }
 
     Ok(())
