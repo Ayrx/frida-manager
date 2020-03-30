@@ -86,13 +86,14 @@ fn main() -> Result<()> {
         release = fetch_latest_release(&client)?;
     }
 
-    println!("version: {}", release.version);
+    println!("[+] Frida Version: {}", release.version);
     let assets = release.get_frida_server_assets();
 
     let version_dir = app_home_dir.join(release.version);
     fs::create_dir_all(&version_dir)
         .expect("error: unable to create $HOME/.fridamanager/$VERSION");
 
+    println!("[+] {} frida-server binaries found.", assets.len());
     for asset in assets {
         if !asset.exists(&version_dir) {
             println!("[+] Downloading {}.", asset.name);
