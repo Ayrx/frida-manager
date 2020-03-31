@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Arg, App, AppSettings, SubCommand};
 use reqwest::blocking as reqb;
 use serde_json::Value;
+use xz2::bufread::XzDecoder;
 use std::io;
 use std::fs;
 use std::path;
@@ -22,15 +23,21 @@ impl Asset {
     fn download(&self,
                       client: &reqb::Client,
                       download_dir: &path::PathBuf) -> Result<()> {
-        let mut response = client.get(&self.download_url).send()?;
-        let mut dest = fs::File::create(download_dir.join(&self.name))?;
-        io::copy(&mut response, &mut dest)?;
+        let response = client.get(&self.download_url).send()?;
+        let response_reader = io::BufReader::new(response);
+
+        let file_name = path::Path::new(&self.name).file_stem().unwrap();
+        let mut dest = fs::File::create(download_dir.join(file_name))?;
+
+        let mut decoder = XzDecoder::new(response_reader);
+        io::copy(&mut decoder, &mut dest)?;
 
         Ok(())
     }
 
     fn exists(&self, download_dir: &path::PathBuf) -> bool {
-        download_dir.join(&self.name).exists()
+        let file_name = path::Path::new(&self.name).file_stem().unwrap();
+        download_dir.join(file_name).exists()
     }
 }
 
@@ -115,7 +122,10 @@ fn fetch(matches: &clap::ArgMatches,
     for asset in assets {
         if !asset.exists(&version_dir) {
             println!("[+] Downloading {}.", asset.name);
-            asset.download(&client, &version_dir)?;
+            if let Err(e) = asset.download(&client, &version_dir) {
+                eprintln!("{}", e);
+                continue;
+            }
         } else {
             println!("[+] {} is cached.", asset.name);
         }
