@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Arg, App, AppSettings, SubCommand};
 use reqwest::blocking as reqb;
 use serde_json::Value;
@@ -6,6 +6,7 @@ use xz2::bufread::XzDecoder;
 use std::io;
 use std::fs;
 use std::path;
+use std::process::Command;
 
 
 const GITHUB_LATEST_RELEASES_URL: &str = "https://api.github.com/repos/frida/frida/releases/latest";
@@ -74,6 +75,8 @@ fn main() -> Result<()> {
                  .takes_value(true)))
         .subcommand(SubCommand::with_name("clean")
             .about("Clean cached artifacts."))
+        .subcommand(SubCommand::with_name("status")
+            .about("Check Frida status."))
     .get_matches();
 
     let home_dir = dirs::home_dir()
@@ -82,8 +85,16 @@ fn main() -> Result<()> {
     fs::create_dir_all(&app_home_dir)
         .expect("error: unable to create $HOME/.fridamanager");
 
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(reqwest::header::USER_AGENT, APP_USER_AGENT.parse().unwrap());
+
+    let client = reqb::Client::builder()
+        .default_headers(headers)
+        .build()?;
+
+
     if let Some(matches) = matches.subcommand_matches("fetch") {
-        fetch(matches, &app_home_dir)?;
+        fetch(matches, &app_home_dir, &client)?;
     }
 
     if let Some(_matches) = matches.subcommand_matches("clean") {
@@ -91,17 +102,40 @@ fn main() -> Result<()> {
         fs::create_dir_all(&app_home_dir)?;
     }
 
+    if let Some(_matches) = matches.subcommand_matches("status") {
+        status(&client)?;
+    }
+
+    Ok(())
+}
+
+fn status(client: &reqb::Client) -> Result<()> {
+    let release = fetch_release(&client, GITHUB_LATEST_RELEASES_URL)?;
+
+    let command = Command::new("frida")
+        .arg("--version")
+        .output()
+        .with_context(|| format!("Failed run `frida` command"))?;
+
+    let command = String::from_utf8(command.stdout).unwrap();
+    let command = command.trim();
+
+    println!("[+] Latest Frida Release: {}", release.version);
+    println!("[+] Currently installed Frida: {}", command);
+
+    if release.version == command {
+        println!("\nCurrently installed version of Frida is up-to-date.");
+    } else {
+        println!("\nCurrently installed version of Frida is not \
+                 the latest version. Please update!");
+    }
+
     Ok(())
 }
 
 fn fetch(matches: &clap::ArgMatches,
-         app_home_dir: &path::PathBuf) -> Result<()> {
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, APP_USER_AGENT.parse().unwrap());
-
-    let client = reqb::Client::builder()
-        .default_headers(headers)
-        .build()?;
+         app_home_dir: &path::PathBuf,
+         client: &reqb::Client) -> Result<()> {
 
     let release;
     if let Some(version) = matches.value_of("FRIDA-VERSION") {
