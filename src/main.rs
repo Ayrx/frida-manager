@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use anyhow::{Context, Result};
 use clap::{Arg, App, AppSettings, SubCommand};
 use reqwest::blocking as reqb;
@@ -153,18 +154,19 @@ fn fetch(matches: &clap::ArgMatches,
         .expect("error: unable to create $HOME/.fridamanager/$VERSION");
 
     println!("[+] {} frida-server binaries found.", assets.len());
-    for asset in assets {
+    assets.into_par_iter().for_each(|asset| {
         if !asset.exists(&version_dir) {
-            println!("[+] Downloading {}.", asset.name);
+            println!("Downloading {}.", asset.name);
             if let Err(e) = asset.download(&client, &version_dir) {
                 eprintln!("{}", e);
-                continue;
+                return;
             }
         } else {
-            println!("[+] {} is cached.", asset.name);
+            println!("{} is cached.", asset.name);
         }
-    }
+    });
 
+    println!("[+] All downloads completed.");
     Ok(())
 }
 
