@@ -65,15 +65,10 @@ The `clean` subcommand clears the cached binaries in `~/.fridamanager`.
 ## Building
 
 `frida-manager` can be compiled to a Linux static binary with
-[muslrust][muslrust].
-
-Run the following commands:
+[cross][cross].
 
 ```
-➜ docker pull clux/muslrust
-➜ docker run -v $PWD:/volume --rm -t clux/muslrust cargo build
+➜ cross build --target x86_64-unknown-linux-musl --release
 ```
 
-Refer to the muslrust documentation for more information and options.
-
-[muslrust]: https://github.com/clux/muslrust
+[cross]: https://github.com/rust-embedded/cross
