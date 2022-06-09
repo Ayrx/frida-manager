@@ -105,7 +105,7 @@ fn main() -> Result<()> {
 }
 
 fn status(client: &reqb::Client) -> Result<()> {
-    let release = fetch_release(&client, GITHUB_LATEST_RELEASES_URL)?;
+    let release = fetch_release(client, GITHUB_LATEST_RELEASES_URL)?;
 
     let command = Command::new("frida")
         .arg("--version")
@@ -138,11 +138,11 @@ fn fetch(
     let release;
     if let Some(version) = matches.value_of("FRIDA-VERSION") {
         release = fetch_release(
-            &client,
+            client,
             format!("{}/{}", GITHUB_RELEASES_URL, version).as_str(),
         )?;
     } else {
-        release = fetch_release(&client, GITHUB_LATEST_RELEASES_URL)?;
+        release = fetch_release(client, GITHUB_LATEST_RELEASES_URL)?;
     }
 
     println!("[+] Frida Version: {}", release.version);
@@ -155,7 +155,7 @@ fn fetch(
     assets.into_par_iter().for_each(|asset| {
         if !asset.exists(&version_dir) {
             println!("Downloading {}.", asset.name);
-            if let Err(e) = asset.download(&client, &version_dir) {
+            if let Err(e) = asset.download(client, &version_dir) {
                 eprintln!("{}", e);
                 return;
             }
