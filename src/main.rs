@@ -16,7 +16,6 @@ const APP_USER_AGENT: &str = "frida-manager";
 #[derive(Clone)]
 struct Asset {
     name: String,
-    content_type: String,
     download_url: String,
 }
 
@@ -135,15 +134,14 @@ fn fetch(
     app_home_dir: &path::Path,
     client: &reqb::Client,
 ) -> Result<()> {
-    let release;
-    if let Some(version) = matches.value_of("FRIDA-VERSION") {
-        release = fetch_release(
+    let release = if let Some(version) = matches.value_of("FRIDA-VERSION") {
+        fetch_release(
             client,
             format!("{}/{}", GITHUB_RELEASES_URL, version).as_str(),
-        )?;
+        )?
     } else {
-        release = fetch_release(client, GITHUB_LATEST_RELEASES_URL)?;
-    }
+        fetch_release(client, GITHUB_LATEST_RELEASES_URL)?
+    };
 
     println!("[+] Frida Version: {}", release.version);
     let assets = release.get_frida_server_assets();
@@ -157,7 +155,6 @@ fn fetch(
             println!("Downloading {}.", asset.name);
             if let Err(e) = asset.download(client, &version_dir) {
                 eprintln!("{}", e);
-                return;
             }
         } else {
             println!("{} is cached.", asset.name);
@@ -184,10 +181,6 @@ fn fetch_release(client: &reqb::Client, url: &str) -> Result<Release> {
             name: asset["name"]
                 .as_str()
                 .expect("error: name is not a string.")
-                .to_string(),
-            content_type: asset["content_type"]
-                .as_str()
-                .expect("error: content_type is not a string.")
                 .to_string(),
             download_url: asset["browser_download_url"]
                 .as_str()
