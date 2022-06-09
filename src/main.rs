@@ -21,7 +21,7 @@ struct Asset {
 }
 
 impl Asset {
-    fn download(&self, client: &reqb::Client, download_dir: &path::PathBuf) -> Result<()> {
+    fn download(&self, client: &reqb::Client, download_dir: &path::Path) -> Result<()> {
         let response = client.get(&self.download_url).send()?;
         let response_reader = io::BufReader::new(response);
 
@@ -34,7 +34,7 @@ impl Asset {
         Ok(())
     }
 
-    fn exists(&self, download_dir: &path::PathBuf) -> bool {
+    fn exists(&self, download_dir: &path::Path) -> bool {
         let file_name = path::Path::new(&self.name).file_stem().unwrap();
         download_dir.join(file_name).exists()
     }
@@ -132,7 +132,7 @@ fn status(client: &reqb::Client) -> Result<()> {
 
 fn fetch(
     matches: &clap::ArgMatches,
-    app_home_dir: &path::PathBuf,
+    app_home_dir: &path::Path,
     client: &reqb::Client,
 ) -> Result<()> {
     let release;
